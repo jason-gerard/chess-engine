@@ -12,7 +12,17 @@ class Engine:
         self.board_value = 0
         self.depth = depth
 
-    def init_evaluate_board(self):
+    def evaluate_board(self):
+        if self.board.is_checkmate():
+            if self.board.turn:
+                return -9999
+            else:
+                return 9999
+        if self.board.is_stalemate():
+            return 0
+        if self.board.is_insufficient_material():
+            return 0
+
         wp = len(self.board.pieces(chess.PAWN, chess.WHITE))
         bp = len(self.board.pieces(chess.PAWN, chess.BLACK))
         wn = len(self.board.pieces(chess.KNIGHT, chess.WHITE))
@@ -42,8 +52,7 @@ class Engine:
         queensq = queensq + sum([-queenstable[chess.square_mirror(i)]
                                  for i in self.board.pieces(chess.QUEEN, chess.BLACK)])
 
-        # local_kings_table = kingstable if self.get_piece_count() <= 5 else kingsendgametable
-        local_kings_table = kingstable
+        local_kings_table = kingstable if self.get_piece_count() <= 5 else kingsendgametable
 
         kingsq = sum([local_kings_table[i] for i in self.board.pieces(chess.KING, chess.WHITE)])
         kingsq = kingsq + sum([-local_kings_table[chess.square_mirror(i)]
@@ -51,24 +60,10 @@ class Engine:
 
         self.board_value = material + pawnsq + knightsq + bishopsq + rooksq + queensq + kingsq
 
-        return self.board_value
-
-    def evaluate_board(self):
-        if self.board.is_checkmate():
-            if self.board.turn:
-                return -9999
-            else:
-                return 9999
-        if self.board.is_stalemate():
-            return 0
-        if self.board.is_insufficient_material():
-            return 0
-
-        value = self.board_value
         if self.board.turn:
-            return value
+            return self.board_value
         else:
-            return -value
+            return -self.board_value
 
     def update_eval(self, mov, side):
         # update piecequares
@@ -218,8 +213,7 @@ class Engine:
         return sum([wp, bp, wn, bn, wb, bb, wr, br, wq, bq])
 
     def get_tables(self):
-        return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable]
-        # return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable if self.get_piece_count() <= 5 else kingsendgametable]
+        return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable if self.get_piece_count() <= 5 else kingsendgametable]
 
 
 pawntable = [
