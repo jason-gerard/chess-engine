@@ -42,7 +42,9 @@ class Engine:
         queensq = queensq + sum([-queenstable[chess.square_mirror(i)]
                                  for i in self.board.pieces(chess.QUEEN, chess.BLACK)])
 
-        local_kings_table = kingstable if self.get_piece_count() <= 5 else kingsendgametable
+        # local_kings_table = kingstable if self.get_piece_count() <= 5 else kingsendgametable
+        local_kings_table = kingstable
+
         kingsq = sum([local_kings_table[i] for i in self.board.pieces(chess.KING, chess.WHITE)])
         kingsq = kingsq + sum([-local_kings_table[chess.square_mirror(i)]
                                for i in self.board.pieces(chess.KING, chess.BLACK)])
@@ -216,7 +218,8 @@ class Engine:
         return sum([wp, bp, wn, bn, wb, bb, wr, br, wq, bq])
 
     def get_tables(self):
-        return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable if self.get_piece_count() <= 5 else kingsendgametable]
+        return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable]
+        # return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable if self.get_piece_count() <= 5 else kingsendgametable]
 
 
 pawntable = [

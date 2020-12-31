@@ -5,7 +5,7 @@ from game import Game
 def main():
     board = chess.Board()
     game = Game(board)
-    game.play_random_moves()
+    game.play_person()
 
 
 if __name__ == "__main__":
