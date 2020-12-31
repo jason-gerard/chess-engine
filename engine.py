@@ -1,18 +1,18 @@
 import random
 import chess
-from chess import *
 import chess.polyglot
+from chess import *
 
 
 class Engine:
 
-    def __init__(self, board: Board, depth: int):
-        self.board = board
-        self.move_history = []
-        self.board_value = 0
-        self.depth = depth
+    def __init__(self, board: Board, depth: int) -> None:
+        self.board: Board = board
+        self.move_history: List[Move] = []
+        self.board_value: int = 0
+        self.depth: int = depth
 
-    def evaluate_board(self):
+    def evaluate_board(self) -> int:
         if self.board.is_checkmate():
             if self.board.turn:
                 return -9999
@@ -65,66 +65,57 @@ class Engine:
         else:
             return -self.board_value
 
-    def update_eval(self, mov, side):
+    def update_eval(self, mov: Move, side: bool) -> None:
         # update piecequares
         movingpiece = self.board.piece_type_at(mov.from_square)
         if side:
-            self.board_value = self.board_value - self.get_tables()[movingpiece - 1][mov.from_square]
             # update castling
             if (mov.from_square == chess.E1) and (mov.to_square == chess.G1):
-                self.board_value = self.board_value - rookstable[chess.H1]
-                self.board_value = self.board_value + rookstable[chess.F1]
+                self.board_value -= rookstable[chess.H1]
+                self.board_value += rookstable[chess.F1]
             elif (mov.from_square == chess.E1) and (mov.to_square == chess.C1):
-                self.board_value = self.board_value - rookstable[chess.A1]
-                self.board_value = self.board_value + rookstable[chess.D1]
+                self.board_value -= rookstable[chess.A1]
+                self.board_value += rookstable[chess.D1]
         else:
-            self.board_value = self.board_value + self.get_tables()[movingpiece - 1][mov.from_square]
             # update castling
             if (mov.from_square == chess.E8) and (mov.to_square == chess.G8):
-                self.board_value = self.board_value + rookstable[chess.H8]
-                self.board_value = self.board_value - rookstable[chess.F8]
+                self.board_value += rookstable[chess.H8]
+                self.board_value -= rookstable[chess.F8]
             elif (mov.from_square == chess.E8) and (mov.to_square == chess.C8):
-                self.board_value = self.board_value + rookstable[chess.A8]
-                self.board_value = self.board_value - rookstable[chess.D8]
+                self.board_value -= rookstable[chess.D8]
+                self.board_value += rookstable[chess.A8]
 
-        if side:
-            self.board_value = self.board_value + self.get_tables()[movingpiece - 1][mov.to_square]
-        else:
-            self.board_value = self.board_value - self.get_tables()[movingpiece - 1][mov.to_square]
+        if movingpiece is not None:
+            self.board_value = (self.board_value + self.get_tables()[movingpiece - 1][mov.to_square]) if side else (self.board_value - self.get_tables()[movingpiece - 1][mov.to_square])
+            self.board_value = (self.board_value - self.get_tables()[movingpiece - 1][mov.from_square]) if side else (self.board_value + self.get_tables()[movingpiece - 1][mov.from_square])
 
         # update material
         if mov.drop is not None:
             if side:
-                self.board_value = self.board_value + piecevalues[mov.drop - 1]
+                self.board_value += piecevalues[mov.drop - 1]
             else:
-                self.board_value = self.board_value - piecevalues[mov.drop - 1]
+                self.board_value -= piecevalues[mov.drop - 1]
 
         # update promotion
-        if mov.promotion is not None:
+        if mov.promotion is not None and movingpiece is not None:
             if side:
-                self.board_value = self.board_value + piecevalues[mov.promotion - 1] - piecevalues[movingpiece - 1]
-                self.board_value = self.board_value - self.get_tables()[movingpiece - 1][mov.to_square] \
-                                   + self.get_tables()[mov.promotion - 1][mov.to_square]
+                self.board_value += (piecevalues[mov.promotion - 1] - piecevalues[movingpiece - 1])
+                self.board_value -= (self.get_tables()[movingpiece - 1][mov.to_square]
+                                     + self.get_tables()[mov.promotion - 1][mov.to_square])
             else:
-                self.board_value = self.board_value - piecevalues[mov.promotion - 1] + piecevalues[movingpiece - 1]
-                self.board_value = self.board_value + self.get_tables()[movingpiece - 1][mov.to_square] \
-                                   - self.get_tables()[mov.promotion - 1][mov.to_square]
+                self.board_value -= (piecevalues[mov.promotion - 1] + piecevalues[movingpiece - 1])
+                self.board_value += (self.get_tables()[movingpiece - 1][mov.to_square]
+                                     - self.get_tables()[mov.promotion - 1][mov.to_square])
 
-            return mov
-
-    def make_move(self, mov):
+    def make_move(self, mov) -> None:
         self.update_eval(mov, self.board.turn)
         self.board.push(mov)
 
-        return mov
-
-    def unmake_move(self):
+    def unmake_move(self) -> None:
         mov = self.board.pop()
         self.update_eval(mov, not self.board.turn)
 
-        return mov
-
-    def quiesce(self, alpha, beta):
+    def quiesce(self, alpha: int, beta: int) -> int:
         stand_pat = self.evaluate_board()
         if stand_pat >= beta:
             return beta
@@ -143,7 +134,7 @@ class Engine:
                     alpha = score
         return alpha
 
-    def alphabeta(self, alpha, beta, depthleft):
+    def alphabeta(self, alpha: int, beta: int, depthleft: int) -> int:
         bestscore = -9999
         if depthleft == 0:
             return self.quiesce(alpha, beta)
@@ -160,7 +151,7 @@ class Engine:
                 alpha = score
         return bestscore
 
-    def select_move(self):
+    def select_move(self) -> Move:
         try:
             move = chess.polyglot.MemoryMappedReader("Perfect2017.bin").weighted_choice(self.board).move
             self.move_history.append(move)
@@ -188,7 +179,7 @@ class Engine:
 
             return best_move
 
-    def get_random_move(self) -> chess.Move:
+    def get_random_move(self) -> Move:
         moves = self.board.legal_moves.__iter__()
         number_of_moves = self.board.legal_moves.count()
         next_move_index = random.randint(1, number_of_moves)
@@ -198,7 +189,7 @@ class Engine:
 
         return next(moves)
 
-    def get_piece_count(self):
+    def get_piece_count(self) -> int:
         wp = len(self.board.pieces(chess.PAWN, chess.WHITE))
         bp = len(self.board.pieces(chess.PAWN, chess.BLACK))
         wn = len(self.board.pieces(chess.KNIGHT, chess.WHITE))
@@ -212,8 +203,9 @@ class Engine:
 
         return sum([wp, bp, wn, bn, wb, bb, wr, br, wq, bq])
 
-    def get_tables(self):
-        return [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable if self.get_piece_count() <= 5 else kingsendgametable]
+    def get_tables(self) -> List[List[int]]:
+        return [pawntable, knightstable, bishopstable, rookstable, queenstable,
+                kingstable if self.get_piece_count() <= 5 else kingsendgametable]
 
 
 pawntable = [
@@ -294,5 +286,4 @@ kingsendgametable = [
 ]
 
 piecetypes = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN, chess.KING]
-tables = [pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable]
 piecevalues = [100, 320, 330, 500, 900]

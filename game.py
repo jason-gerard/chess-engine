@@ -8,7 +8,7 @@ class Game:
 
     def __init__(self, board: Board) -> None:
         self.board = board
-        self.engine = Engine(board, 3)
+        self.engine = Engine(board, 2)
 
     def play_random_moves(self):
         while not self.board.is_game_over(claim_draw=True):
