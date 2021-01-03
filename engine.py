@@ -1,25 +1,28 @@
 import random
 import chess
-import chess.polyglot
-from chess import *
+from tables import Tables
 
 
 class Engine:
 
-    def __init__(self, board: Board, depth: int) -> None:
-        self.board: Board = board
-        self.move_history: List[Move] = []
+    def __init__(self, board: chess.Board, depth: int) -> None:
+        self.board: chess.Board = board
+        self.move_history: chess.List[chess.Move] = []
         self.board_value: int = 0
         self.depth: int = depth
+        self.tables = Tables()
+        self.color = chess.WHITE
+        self.opponent_color = chess.BLACK
+
+        self.piece_values = [100, 320, 330, 500, 900]
 
     def evaluate_board(self) -> int:
         if self.board.is_checkmate():
-            if self.board.turn:
-                return -9999
-            else:
-                return 9999
+            return -9999 if self.board.turn else 9999
+
         if self.board.is_stalemate():
             return 0
+
         if self.board.is_insufficient_material():
             return 0
 
@@ -36,76 +39,58 @@ class Engine:
 
         material = 100 * (wp - bp) + 320 * (wn - bn) + 330 * (wb - bb) + 500 * (wr - br) + 900 * (wq - bq)
 
-        pawnsq = sum([pawntable[i] for i in self.board.pieces(chess.PAWN, chess.WHITE)])
-        pawnsq = pawnsq + sum([-pawntable[chess.square_mirror(i)]
-                               for i in self.board.pieces(chess.PAWN, chess.BLACK)])
-        knightsq = sum([knightstable[i] for i in self.board.pieces(chess.KNIGHT, chess.WHITE)])
-        knightsq = knightsq + sum([-knightstable[chess.square_mirror(i)]
-                                   for i in self.board.pieces(chess.KNIGHT, chess.BLACK)])
-        bishopsq = sum([bishopstable[i] for i in self.board.pieces(chess.BISHOP, chess.WHITE)])
-        bishopsq = bishopsq + sum([-bishopstable[chess.square_mirror(i)]
-                                   for i in self.board.pieces(chess.BISHOP, chess.BLACK)])
-        rooksq = sum([rookstable[i] for i in self.board.pieces(chess.ROOK, chess.WHITE)])
-        rooksq = rooksq + sum([-rookstable[chess.square_mirror(i)]
-                               for i in self.board.pieces(chess.ROOK, chess.BLACK)])
-        queensq = sum([queenstable[i] for i in self.board.pieces(chess.QUEEN, chess.WHITE)])
-        queensq = queensq + sum([-queenstable[chess.square_mirror(i)]
-                                 for i in self.board.pieces(chess.QUEEN, chess.BLACK)])
-
-        local_kings_table = kingstable if self.get_piece_count() <= 5 else kingsendgametable
-
-        kingsq = sum([local_kings_table[i] for i in self.board.pieces(chess.KING, chess.WHITE)])
-        kingsq = kingsq + sum([-local_kings_table[chess.square_mirror(i)]
-                               for i in self.board.pieces(chess.KING, chess.BLACK)])
+        pawnsq = self.get_piece_table_sum_for_ai(chess.PAWN) + self.get_piece_table_sum_for_opponent(chess.PAWN)
+        knightsq = self.get_piece_table_sum_for_ai(chess.KNIGHT) + self.get_piece_table_sum_for_opponent(chess.KNIGHT)
+        bishopsq = self.get_piece_table_sum_for_ai(chess.BISHOP) + self.get_piece_table_sum_for_opponent(chess.BISHOP)
+        rooksq = self.get_piece_table_sum_for_ai(chess.ROOK) + self.get_piece_table_sum_for_opponent(chess.ROOK)
+        queensq = self.get_piece_table_sum_for_ai(chess.QUEEN) + self.get_piece_table_sum_for_opponent(chess.QUEEN)
+        kingsq = self.get_piece_table_sum_for_ai(chess.KING) + self.get_piece_table_sum_for_opponent(chess.KING)
 
         self.board_value = material + pawnsq + knightsq + bishopsq + rooksq + queensq + kingsq
 
-        if self.board.turn:
-            return self.board_value
-        else:
-            return -self.board_value
+        return self.board_value if self.board.turn else -self.board_value
 
-    def update_eval(self, mov: Move, side: bool) -> None:
+    def update_eval(self, mov: chess.Move, side: bool) -> None:
         # update piecequares
         movingpiece = self.board.piece_type_at(mov.from_square)
         if side:
             # update castling
             if (mov.from_square == chess.E1) and (mov.to_square == chess.G1):
-                self.board_value -= rookstable[chess.H1]
-                self.board_value += rookstable[chess.F1]
+                self.board_value -= self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.H1]
+                self.board_value += self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.F1]
             elif (mov.from_square == chess.E1) and (mov.to_square == chess.C1):
-                self.board_value -= rookstable[chess.A1]
-                self.board_value += rookstable[chess.D1]
+                self.board_value -= self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.A1]
+                self.board_value += self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.D1]
         else:
             # update castling
             if (mov.from_square == chess.E8) and (mov.to_square == chess.G8):
-                self.board_value += rookstable[chess.H8]
-                self.board_value -= rookstable[chess.F8]
+                self.board_value += self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.H8]
+                self.board_value -= self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.F8]
             elif (mov.from_square == chess.E8) and (mov.to_square == chess.C8):
-                self.board_value -= rookstable[chess.D8]
-                self.board_value += rookstable[chess.A8]
+                self.board_value -= self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.D8]
+                self.board_value += self.tables.get_table_by_piece_and_color(chess.ROOK, self.color, self.is_end_game())[chess.A8]
 
         if movingpiece is not None:
-            self.board_value = (self.board_value + self.get_tables()[movingpiece - 1][mov.to_square]) if side else (self.board_value - self.get_tables()[movingpiece - 1][mov.to_square])
-            self.board_value = (self.board_value - self.get_tables()[movingpiece - 1][mov.from_square]) if side else (self.board_value + self.get_tables()[movingpiece - 1][mov.from_square])
+            self.board_value = (self.board_value + self.get_tables_for_ai()[movingpiece - 1][mov.to_square]) if side else (self.board_value - self.get_tables_for_ai()[movingpiece - 1][mov.to_square])
+            self.board_value = (self.board_value - self.get_tables_for_ai()[movingpiece - 1][mov.from_square]) if side else (self.board_value + self.get_tables_for_ai()[movingpiece - 1][mov.from_square])
 
         # update material
         if mov.drop is not None:
             if side:
-                self.board_value += piecevalues[mov.drop - 1]
+                self.board_value += self.piece_values[mov.drop - 1]
             else:
-                self.board_value -= piecevalues[mov.drop - 1]
+                self.board_value -= self.piece_values[mov.drop - 1]
 
         # update promotion
         if mov.promotion is not None and movingpiece is not None:
             if side:
-                self.board_value += (piecevalues[mov.promotion - 1] - piecevalues[movingpiece - 1])
-                self.board_value -= (self.get_tables()[movingpiece - 1][mov.to_square]
-                                     + self.get_tables()[mov.promotion - 1][mov.to_square])
+                self.board_value += (self.piece_values[mov.promotion - 1] - self.piece_values[movingpiece - 1])
+                self.board_value -= (self.get_tables_for_ai()[movingpiece - 1][mov.to_square]
+                                     + self.get_tables_for_ai()[mov.promotion - 1][mov.to_square])
             else:
-                self.board_value -= (piecevalues[mov.promotion - 1] + piecevalues[movingpiece - 1])
-                self.board_value += (self.get_tables()[movingpiece - 1][mov.to_square]
-                                     - self.get_tables()[mov.promotion - 1][mov.to_square])
+                self.board_value -= (self.piece_values[mov.promotion - 1] + self.piece_values[movingpiece - 1])
+                self.board_value += (self.get_tables_for_ai()[movingpiece - 1][mov.to_square]
+                                     - self.get_tables_for_ai()[mov.promotion - 1][mov.to_square])
 
     def make_move(self, mov) -> None:
         self.update_eval(mov, self.board.turn)
@@ -151,7 +136,7 @@ class Engine:
                 alpha = score
         return bestscore
 
-    def select_move(self) -> Move:
+    def select_move(self) -> chess.Move:
         try:
             move = chess.polyglot.MemoryMappedReader("Perfect2017.bin").weighted_choice(self.board).move
             self.move_history.append(move)
@@ -179,7 +164,7 @@ class Engine:
 
             return best_move
 
-    def get_random_move(self) -> Move:
+    def get_random_move(self) -> chess.Move:
         moves = self.board.legal_moves.__iter__()
         number_of_moves = self.board.legal_moves.count()
         next_move_index = random.randint(1, number_of_moves)
@@ -203,87 +188,19 @@ class Engine:
 
         return sum([wp, bp, wn, bn, wb, bb, wr, br, wq, bq])
 
-    def get_tables(self) -> List[List[int]]:
-        return [pawntable, knightstable, bishopstable, rookstable, queenstable,
-                kingstable if self.get_piece_count() <= 5 else kingsendgametable]
+    def is_end_game(self) -> bool:
+        return self.get_piece_count() <= 5
 
+    def get_piece_table_sum(self, piece: chess.PIECE_TYPES, color: chess.COLORS) -> int:
+        table = self.tables.get_table_by_piece_and_color(piece, color, self.is_end_game())
 
-pawntable = [
-    0, 0, 0, 0, 0, 0, 0, 0,
-    5, 10, 10, -20, -20, 10, 10, 5,
-    5, -5, -10, 0, 0, -10, -5, 5,
-    0, 0, 0, 20, 20, 0, 0, 0,
-    5, 5, 10, 25, 25, 10, 5, 5,
-    10, 10, 20, 30, 30, 20, 10, 10,
-    50, 50, 50, 50, 50, 50, 50, 50,
-    0, 0, 0, 0, 0, 0, 0, 0
-]
+        return sum([table[i] for i in self.board.pieces(piece, color)])
 
-knightstable = [
-    -50, -40, -30, -30, -30, -30, -40, -50,
-    -40, -20, 0, 5, 5, 0, -20, -40,
-    -30, 5, 10, 15, 15, 10, 5, -30,
-    -30, 0, 15, 20, 20, 15, 0, -30,
-    -30, 5, 15, 20, 20, 15, 5, -30,
-    -30, 0, 10, 15, 15, 10, 0, -30,
-    -40, -20, 0, 0, 0, 0, -20, -40,
-    -50, -40, -30, -30, -30, -30, -40, -50
-]
+    def get_piece_table_sum_for_ai(self, piece: chess.PIECE_TYPES) -> int:
+        return self.get_piece_table_sum(piece, self.color)
 
-bishopstable = [
-    -20, -10, -10, -10, -10, -10, -10, -20,
-    -10, 5, 0, 0, 0, 0, 5, -10,
-    -10, 10, 10, 10, 10, 10, 10, -10,
-    -10, 0, 10, 10, 10, 10, 0, -10,
-    -10, 5, 5, 10, 10, 5, 5, -10,
-    -10, 0, 5, 10, 10, 5, 0, -10,
-    -10, 0, 0, 0, 0, 0, 0, -10,
-    -20, -10, -10, -10, -10, -10, -10, -20
-]
+    def get_piece_table_sum_for_opponent(self, piece: chess.PIECE_TYPES) -> int:
+        return -self.get_piece_table_sum(piece, self.opponent_color)
 
-rookstable = [
-    0, 0, 0, 5, 5, 0, 0, 0,
-    -5, 0, 0, 0, 0, 0, 0, -5,
-    -5, 0, 0, 0, 0, 0, 0, -5,
-    -5, 0, 0, 0, 0, 0, 0, -5,
-    -5, 0, 0, 0, 0, 0, 0, -5,
-    -5, 0, 0, 0, 0, 0, 0, -5,
-    5, 10, 10, 10, 10, 10, 10, 5,
-    0, 0, 0, 0, 0, 0, 0, 0
-]
-
-queenstable = [
-    -20, -10, -10, -5, -5, -10, -10, -20,
-    -10, 0, 0, 0, 0, 0, 0, -10,
-    -10, 5, 5, 5, 5, 5, 0, -10,
-    0, 0, 5, 5, 5, 5, 0, -5,
-    -5, 0, 5, 5, 5, 5, 0, -5,
-    -10, 0, 5, 5, 5, 5, 0, -10,
-    -10, 0, 0, 0, 0, 0, 0, -10,
-    -20, -10, -10, -5, -5, -10, -10, -20
-]
-
-kingstable = [
-    20, 30, 10, 0, 0, 10, 30, 20,
-    20, 20, 0, 0, 0, 0, 20, 20,
-    -10, -20, -20, -20, -20, -20, -20, -10,
-    -20, -30, -30, -40, -40, -30, -30, -20,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30,
-    -30, -40, -40, -50, -50, -40, -40, -30
-]
-
-kingsendgametable = [
-    -50, -40, -30, -20, -20, -30, -40, -50,
-    -30, -20, -10, 0, 0, -10, -20, -30,
-    -30, -10, 20, 30, 30, 20, -10, -30,
-    -30, -10, 30, 40, 40, 30, -10, -30,
-    -30, -10, 30, 40, 40, 30, -10, -30,
-    -30, -10, 20, 30, 30, 20, -10, -30,
-    -30, -30, 0, 0, 0, 0, -30, -30,
-    -50, -30, -30, -30, -30, -30, -30, -50
-]
-
-piecetypes = [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN, chess.KING]
-piecevalues = [100, 320, 330, 500, 900]
+    def get_tables_for_ai(self):
+        return self.tables.get_tables_by_color(self.color, self.is_end_game())
