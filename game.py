@@ -13,7 +13,7 @@ class Game:
     def play_random_moves(self):
         while not self.board.is_game_over(claim_draw=True):
             if self.board.turn:
-                move = self.engine.select_move()
+                move = self.engine.next_move()
                 print(f"AI moves to -> {move}")
                 self.board.push(move)
             else:
@@ -28,7 +28,7 @@ class Game:
     def play_person(self):
         while not self.board.is_game_over(claim_draw=True):
             if self.board.turn:
-                move = self.engine.select_move()
+                move = self.engine.next_move()
                 print(f"AI moves to -> {move}")
                 self.board.push(move)
             else:

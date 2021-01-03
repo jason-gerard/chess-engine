@@ -158,14 +158,14 @@ class Tables:
         chess.KING: 'kings_table'
     }
 
-    def get_white_table_by_piece(self, piece: chess.PIECE_TYPES, is_end_game: bool) -> chess.List[int]:
+    def get_white_table_by_piece(self, piece, is_end_game: bool) -> chess.List[int]:
         if piece is chess.KING and is_end_game:
             return self.white_tables['kings_end_game_table']
 
         table_name = self.piece_name_to_table_name[piece]
         return self.white_tables[table_name]
 
-    def get_black_table_by_piece(self, piece: chess.PIECE_TYPES, is_end_game: bool) -> chess.List[int]:
+    def get_black_table_by_piece(self, piece, is_end_game: bool) -> chess.List[int]:
         if piece is chess.KING and is_end_game:
             return self.black_tables['kings_end_game_table']
 
@@ -188,13 +188,13 @@ class Tables:
                 self.black_tables['queens_table'],
                 self.black_tables['kings_table'] if not is_end_game else self.black_tables['kings_end_game_table']]
 
-    def get_tables_by_color(self, color: chess.COLORS, is_end_game: bool) -> chess.List[chess.List[int]]:
+    def get_tables_by_color(self, color, is_end_game: bool) -> chess.List[chess.List[int]]:
         if color is chess.WHITE:
             return self.get_white_tables(is_end_game)
         else:
             return self.get_black_tables(is_end_game)
 
-    def get_table_by_piece_and_color(self, piece: chess.PIECE_TYPES, color: chess.COLORS, is_end_game: bool) -> chess.List[int]:
+    def get_table_by_piece_and_color(self, piece, color, is_end_game: bool) -> chess.List[int]:
         if color is chess.WHITE:
             return self.get_white_table_by_piece(piece, is_end_game)
         else:
