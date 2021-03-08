@@ -1,6 +1,6 @@
 # chess-engine
 
-This is a chess engine / AI built with advanced game algorithms in order to decide and find the best move.
+Chess engine / AI built with game tree algorithms in order to decide and find the best move. It uses opening move books and various well known tables and weights.
 
 ## Setup
 ```
