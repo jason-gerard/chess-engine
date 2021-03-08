@@ -1,5 +1,7 @@
 # chess-engine
 
+This is a chess engine / AI built with advanced game algorithms in order to decide and find the best move.
+
 ## Setup
 ```
 python3 -m venv venv
